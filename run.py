@@ -111,8 +111,6 @@ def main():
         print("🔧 Starting Vulnalyze in DEVELOPMENT mode")
         print(f"📍 Application available at: http://{args.host}:{args.port}")
         print("👤 Default admin credentials:")
-        print("   Username: admin")
-        print("   Password: admin123")
         print("")
         print("📋 To enable background scanning, run in another terminal:")
         print("   celery -A celery_worker.celery_app worker --loglevel=info")
