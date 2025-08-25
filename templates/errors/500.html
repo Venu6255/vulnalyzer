@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}500 Server Error - Vulnalyze{% endblock %}
+
+{% block content %}
+<div class="container text-center my-5">
+    <h1 class="display-1 text-danger"><i class="fas fa-exclamation-circle"></i> 500</h1>
+    <h3 class="mb-3">Something went wrong on our end. We're working to fix this issue.</h3>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary"><i class="fas fa-home me-2"></i>Go to Home</a>
+</div>
+{% endblock %}

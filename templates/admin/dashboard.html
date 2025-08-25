@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Vulnalyze{% endblock %}
+
+{% block content %}
+<!-- Admin Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-crown text-warning me-2"></i>Admin Dashboard
+        </h2>
+        <p class="text-muted mb-0">System administration and management</p>
+    </div>
+    <div>
+        <span class="badge bg-warning fs-6 px-3 py-2">
+            <i class="fas fa-shield-alt me-2"></i>Administrator Access
+        </span>
+    </div>
+</div>
+
+<!-- System Statistics -->
+<div class="row g-4 mb-5">
+    <div class="col-xl-3 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-users fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title text-muted mb-1">Total Users</h5>
+                        <h2 class="mb-0 text-primary">{{ system_stats.total_users or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-search fa-2x text-success"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title text-muted mb-1">Total Scans</h5>
+                        <h2 class="mb-0 text-success">{{ system_stats.total_scans or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title text-muted mb-1">Vulnerabilities</h5>
+                        <h2 class="mb-0 text-danger">{{ system_stats.total_vulnerabilities or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                            <i class="fas fa-user-check fa-2x text-info"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title text-muted mb-1">Active Users</h5>
+                        <h2 class="mb-0 text-info">{{ system_stats.active_users or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt text-primary me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-users me-2"></i>
+                            <br>Manage Users
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#systemSettingsModal">
+                            <i class="fas fa-cog me-2"></i>
+                            <br>System Settings
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-info w-100" onclick="exportSystemData()">
+                            <i class="fas fa-download me-2"></i>
+                            <br>Export Data
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-warning w-100" onclick="viewSystemLogs()">
+                            <i class="fas fa-file-alt me-2"></i>
+                            <br>System Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line text-primary me-2"></i>System Health
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-6">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-server fa-2x text-success mb-2"></i>
+                            <h6>Server Status</h6>
+                            <span class="badge bg-success">Online</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-database fa-2x text-success mb-2"></i>
+                            <h6>Database</h6>
+                            <span class="badge bg-success">Connected</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-memory fa-2x {{ 'text-success' if redis_status else 'text-warning' }} mb-2"></i>
+                            <h6>Redis Cache</h6>
+                            <span class="badge bg-{{ 'success' if redis_status else 'warning' }}">
+                                {{ 'Connected' if redis_status else 'Offline' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-tasks fa-2x text-success mb-2"></i>
+                            <h6>Task Queue</h6>
+                            <span class="badge bg-success">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history text-primary me-2"></i>Recent System Activity
+                    </h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshActivity()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Time</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_activity %}
+                                {% for activity in recent_activity %}
+                                <tr>
+                                    <td><small class="text-muted">{{ activity.timestamp }}</small></td>
+                                    <td>{{ activity.username }}</td>
+                                    <td>{{ activity.action }}</td>
+                                    <td class="text-truncate" style="max-width: 200px;">{{ activity.details }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ activity.status_class }}">
+                                            {{ activity.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="fas fa-info-circle text-muted me-2"></i>
+                                        No recent activity to display.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie text-primary me-2"></i>Usage Statistics
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <canvas id="usageChart" width="200" height="200"></canvas>
+                </div>
+                <div class="row g-2 text-center small">
+                    <div class="col-6">
+                        <div class="p-2 bg-primary bg-opacity-10 rounded">
+                            <div class="fw-semibold text-primary">{{ today_stats.scans_today or 0 }}</div>
+                            <div class="text-muted">Today's Scans</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 bg-success bg-opacity-10 rounded">
+                            <div class="fw-semibold text-success">{{ today_stats.new_users_today or 0 }}</div>
+                            <div class="text-muted">New Users</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Settings Modal -->
+<div class="modal fade" id="systemSettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog text-primary me-2"></i>System Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Max Concurrent Scans</label>
+                            <input type="number" class="form-control" value="5" min="1" max="20">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Default Scan Timeout (minutes)</label>
+                            <input type="number" class="form-control" value="60" min="10" max="300">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">User Registration</label>
+                            <select class="form-select">
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                                <option value="admin_approval">Admin Approval Required</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data Retention (days)</label>
+                            <input type="number" class="form-control" value="90" min="7" max="365">
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6 class="mb-3">Email Configuration</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">SMTP Server</label>
+                            <input type="text" class="form-control" placeholder="smtp.gmail.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">SMTP Port</label>
+                            <input type="number" class="form-control" value="587">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enable_email">
+                                <label class="form-check-label" for="enable_email">
+                                    Enable Email Notifications
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshActivity() {
+    location.reload();
+}
+
+function exportSystemData() {
+    // Implementation for data export
+    alert('System data export feature coming soon!');
+}
+
+function viewSystemLogs() {
+    // Implementation for viewing logs
+    alert('System logs viewer coming soon!');
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshActivity, 30000);
+</script>
+{% endblock %}

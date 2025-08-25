@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Status - {{ scan.target_url }} - Vulnalyze{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+
+    <h2 class="mb-4"><i class="fas fa-info-circle me-2"></i>Scan Status</h2>
+
+    <div class="mb-3">
+        <strong>Target URL:</strong> {{ scan.target_url }}<br>
+        <strong>Status:</strong>
+        <span id="scan-status-badge" class="badge
+             {% if scan.status == 'completed' %}bg-success{% 
+                elif scan.status == 'running' %}bg-primary{% 
+                elif scan.status == 'failed' %}bg-danger{% 
+                else %}bg-secondary{% endif %}">
+            {{ scan.status.title() }}
+        </span><br>
+        <strong>Scan Duration:</strong>
+        <span id="scan-duration">{{ scan.duration_formatted or 'N/A' }}</span><br>
+        <strong>Scan Date:</strong> {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}<br>
+        <strong>Total Vulnerabilities:</strong>
+        <span id="scan-vuln-count">{{ scan.total_vulnerabilities }}</span>
+    </div>
+
+    <!-- Export and Cancel Buttons -->
+    <div class="mb-3">
+        {% if scan.status == 'completed' and vulnerabilities %}
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-download me-1"></i>Export Report
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('scan.export_scan', scan_id=scan.id, format='pdf') }}">
+                    <i class="fas fa-file-pdf me-2"></i>PDF Report</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('scan.export_scan', scan_id=scan.id, format='csv') }}">
+                    <i class="fas fa-file-csv me-2"></i>CSV Report</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('scan.export_scan', scan_id=scan.id, format='excel') }}">
+                    <i class="fas fa-file-excel me-2"></i>Excel Report</a></li>
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if scan.status in ['running','queued'] %}
+        <button id="cancel-btn" class="btn btn-danger">
+            <i class="fas fa-stop me-1"></i>Cancel Scan
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive" id="vuln-table-container" {% if not vulnerabilities %}style="display:none"{% endif %}>
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Severity</th>
+                    <th>Type</th>
+                    <th>URL</th>
+                    <th>Parameter</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="vuln-table-body">
+               {% if vulnerabilities %}
+                {% for vuln in vulnerabilities %}
+                <tr class="vulnerability-{{ vuln.severity|lower }}">
+                    <td><span class="badge {% if vuln.severity in ['Critical','High'] %}bg-danger{% elif vuln.severity == 'Medium' %}bg-warning{% else %}bg-success{% endif %}">{{ vuln.severity }}</span></td>
+                    <td>{{ vuln.vuln_type }}</td>
+                    <td><a href="{{ vuln.url }}" target="_blank">{{ vuln.url }}</a></td>
+                    <td>{{ vuln.parameter or 'N/A' }}</td>
+                    <td>{{ vuln.description or 'No description available.' }}</td>
+                </tr>
+                {% endfor %}
+               {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Remediation Tips Section -->
+    {% if vulnerabilities %}
+    <div class="card mt-4" id="remediation-section">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-shield-alt me-2"></i>Security Remediation Recommendations
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Based on the vulnerabilities found in this scan, here are our recommendations to secure your application:</p>
+            
+            {% set vuln_types = {} %}
+            {% for vuln in vulnerabilities %}
+                {% if vuln_types.update({vuln.vuln_type: vuln.remediation}) %}{% endif %}
+            {% endfor %}
+
+            <div class="row">
+                {% for vuln_type, remediation in vuln_types.items() %}
+                <div class="col-md-6 mb-3">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-bug me-2"></i>{{ vuln_type }}
+                        </h6>
+                        <p class="mb-0">{{ remediation }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- General Security Tips -->
+            <div class="mt-4">
+                <h6><i class="fas fa-lightbulb me-2"></i>General Security Best Practices:</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Keep all software and dependencies updated</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Implement a Web Application Firewall (WAF)</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Regular security scanning and code reviews</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Follow OWASP Top 10 security guidelines</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Implement proper logging and monitoring</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="alert alert-info text-center" role="alert" id="no-vuln-alert" {% if vulnerabilities %}style="display:none"{% endif %}>
+        <i class="fas fa-shield-alt me-2"></i>Excellent! No vulnerabilities found in this scan. Your application appears to be secure.
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scanId = {{ scan.id }};
+    const statusBadge = document.getElementById('scan-status-badge');
+    const durationEl = document.getElementById('scan-duration');
+    const vulnCountEl = document.getElementById('scan-vuln-count');
+    const vulnTableBody = document.getElementById('vuln-table-body');
+    const vulnTableContainer = document.getElementById('vuln-table-container');
+    const noVulnAlert = document.getElementById('no-vuln-alert');
+    const remediationSection = document.getElementById('remediation-section');
+
+    // Cancel button event listener
+    document.getElementById('cancel-btn')?.addEventListener('click', async () => {
+        try {
+            const res = await fetch(`{{ url_for('scan.cancel_scan', scan_id=scan.id) }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            if (res.ok) location.reload();
+        } catch (err) {
+            console.error('Cancel error', err);
+            alert('Failed to cancel scan');
+        }
+    });
+
+    const interval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/v1/scans/${scanId}`);
+            if (!res.ok) throw new Error('Network response was not ok');
+            const data = await res.json();
+
+            // Update status badge
+            statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+            statusBadge.className = 'badge ' + (
+                (data.status === 'completed') ? 'bg-success' :
+                (data.status === 'running') ? 'bg-primary' :
+                (data.status === 'failed') ? 'bg-danger' : 'bg-secondary'
+            );
+
+            // Update duration and count
+            durationEl.textContent = data.duration || 'N/A';
+            vulnCountEl.textContent = data.total_vulnerabilities;
+
+            // When completed, stop polling and refresh page to show results
+            if (data.status === 'completed') {
+                clearInterval(interval);
+                location.reload(); // Reload to show vulnerabilities and remediation
+            }
+        } catch (err) {
+            console.error('Error polling scan status:', err);
+        }
+    }, 5000);
+});
+</script>
+{% endblock %}
