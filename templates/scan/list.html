@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Scan History - Vulnalyze{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Scan History</h2>
+    <form class="d-flex" method="get" action="{{ url_for('scan.list_scans') }}">
+        <input class="form-control me-2" type="search" placeholder="Search scans" aria-label="Search" name="q" value="{{ request.args.get('q', '') }}">
+        <select class="form-select me-2" name="status" aria-label="Filter by status">
+            <option value="all" {% if request.args.get('status') == 'all' or not request.args.get('status') %}selected{% endif %}>All Statuses</option>
+            <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="running" {% if request.args.get('status') == 'running' %}selected{% endif %}>Running</option>
+            <option value="queued" {% if request.args.get('status') == 'queued' %}selected{% endif %}>Queued</option>
+            <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="failed" {% if request.args.get('status') == 'failed' %}selected{% endif %}>Failed</option>
+            <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Filter</button>
+    </form>
+</div>
+
+{% if scans.items %}
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Target URL</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Vulnerabilities</th>
+            <th>Duration</th>
+            <th>Actions</th>
+            <th>Cancel</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for scan in scans.items %}
+        <tr>
+            <td>
+                <a href="{{ scan.target_url }}" target="_blank" rel="noopener noreferrer">{{ scan.target_url }}</a>
+            </td>
+            <td>
+                {% set status = scan.status.lower() %}
+                {% if status == 'pending' %}
+                    <span class="badge bg-secondary">Pending</span>
+                {% elif status == 'running' %}
+                    <span class="badge bg-primary">Running</span>
+                {% elif status == 'queued' %}
+                    <span class="badge bg-info text-dark">Queued</span>
+                {% elif status == 'completed' %}
+                    <span class="badge bg-success">Completed</span>
+                {% elif status == 'failed' %}
+                    <span class="badge bg-danger">Failed</span>
+                {% elif status == 'cancelled' %}
+                    <span class="badge bg-warning text-dark">Cancelled</span>
+                {% else %}
+                    <span class="badge bg-light text-dark">{{ scan.status }}</span>
+                {% endif %}
+            </td>
+            <td>{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+                <span class="badge bg-danger">{{ scan.critical_count or 0 }}</span>
+                <span class="badge bg-warning text-dark">{{ scan.high_count or 0 }}</span>
+                <span class="badge bg-info text-dark">{{ scan.medium_count or 0 }}</span>
+                <span class="badge bg-success">{{ scan.low_count or 0 }}</span>
+                <span class="badge bg-secondary">{{ scan.info_count or 0 }}</span>
+            </td>
+            <td>{{ scan.duration or 'N/A' }}</td>
+            <td>
+                <a href="{{ url_for('scan.status', scan_id=scan.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+            </td>
+            <td>
+                {% if status in ['running', 'queued'] %}
+                <form method="post" action="{{ url_for('scan.cancel_scan', scan_id=scan.id) }}" class="d-inline cancel-scan-form">
+                    {{ csrf_token() }}
+                    <button type="submit" class="btn btn-sm btn-danger" title="Cancel Scan">Cancel</button>
+                </form>
+                {% else %}
+                <span>-</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if scans.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('scan.list_scans', page=scans.prev_num, q=request.args.get('q'), status=request.args.get('status')) }}">Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Previous</span>
+        </li>
+        {% endif %}
+
+        {% for page_num in scans.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+            {% if page_num %}
+                {% if page_num == scans.page %}
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">{{ page_num }}</span>
+                </li>
+                {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('scan.list_scans', page=page_num, q=request.args.get('q'), status=request.args.get('status')) }}">{{ page_num }}</a>
+                </li>
+                {% endif %}
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if scans.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('scan.list_scans', page=scans.next_num, q=request.args.get('q'), status=request.args.get('status')) }}">Next</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Next</span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% else %}
+<p>No scans found.</p>
+{% endif %}
+
+<!-- Async cancel submission JavaScript -->
+<script>
+document.querySelectorAll('.cancel-scan-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if(confirm("Are you sure you want to cancel this scan?")) {
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.querySelector('[name=csrf_token]').value,
+                    'Accept': 'application/json',
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || data.error);
+                location.reload();  // Reload to update scan list status
+            })
+            .catch(() => alert('Request failed. Please try again.'));
+        }
+    });
+});
+</script>
+{% endblock %}
