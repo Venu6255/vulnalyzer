@@ -1,0 +1,31 @@
+# Virtual environment folders
+venv/
+env/
+__pycache__/
+
+# Python bytecode
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+
+# Local config files
+instance/
+.env
+*.env
+
+# SQLite databases
+*.sqlite
+*.db
+
+# Cache and temp files
+*.cache
+*.out
+*.bak
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
